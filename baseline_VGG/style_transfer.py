@@ -12,8 +12,8 @@ import utils
 
 def setup():
     """
-    checkpoints: models  
-    outputs: results
+    :checkpoints: models  
+    :outputs: results
     """
     utils.safe_mkdir("checkpoints")
     utils.safe_mkdir("outputs")
