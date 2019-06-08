@@ -26,6 +26,18 @@ class FeatureExtractor(nn.Sequential):
                 return x
 
 
+def setup(checkpoint_path, sample_path):
+    """
+    :checkpoint_path: path of model checkpoints 
+    :sample_path: path of sample outputs
+    """
+    if not os.path.exists(checkpoint_path):
+        os.makedirs(checkpoint_path)
+    
+    if not os.path.exists(sample_path):    
+        os.makedirs(sample_path)
+
+
 def get_feature_extractor(device):
     """
     Load pretrained vgg as a feature extractor
@@ -49,7 +61,7 @@ def get_feature_extractor(device):
             model.add_module(name, layer)
 
         if isinstance(layer, nn.MaxPool2d):
-            # TODO: change to nn.AvgPool2d((2,2))
+            # TODO: try to use nn.AvgPool2d((2,2))
             name = 'pool_' + str(block_counter)
             relu_counter = conv_counter = 1
             block_counter += + 1
@@ -270,6 +282,8 @@ def test_patches(model, device):
 
 
 def main():
+    setup(config.checkpoint_path, config.sample_path)
+    
     device = torch.device('cuda:0' if config.use_cuda else 'cpu')
     model = Enhancer(config, device)
     if config.resume_iter != 0:
