@@ -5,6 +5,8 @@ config = easydict.EasyDict()
 config.data_path = '../data/patches/'
 config.sample_path = './samples/'
 config.checkpoint_path = './checkpoints/'
+config.model_type = 'DCGAN'  # ['DCGAN', 'WGAN']
+
 
 config.batch_size = 35
 config.height = 100

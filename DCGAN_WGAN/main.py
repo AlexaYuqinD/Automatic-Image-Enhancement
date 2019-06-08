@@ -31,12 +31,14 @@ def setup(checkpoint_path, sample_path):
     :checkpoint_path: path of model checkpoints 
     :sample_path: path of sample outputs
     """
-    if not os.path.exists(checkpoint_path):
-        os.makedirs(checkpoint_path)
+    if not os.path.exists(os.path.join(config.checkpoint_path, config.model_type)):
+        os.makedirs(os.path.join(config.checkpoint_path, config.model_type))
     
-    if not os.path.exists(sample_path):    
-        os.makedirs(sample_path)
+    if not os.path.exists(os.path.join(config.sample_path, config.model_type)):    
+        os.makedirs(os.path.join(config.sample_path, config.model_type))
 
+    if not os.path.exists('./logs/'):
+        os.makedirs('./logs/')
 
 def get_feature_extractor(device):
     """
@@ -94,7 +96,7 @@ def load_checkpoints(model):
     :model: image enhancer model
     """    
     print('Loading the model checkpoints from iter {}...'.format(config.resume_iter))
-    checkpoint_path = config.checkpoint_path
+    checkpoint_path = os.path.join(config.checkpoint_path, config.model_type)
 
     gen_g_path = os.path.join(checkpoint_path, '{}-Gen_g.ckpt'.format(config.resume_iter))
     gen_f_path = os.path.join(checkpoint_path, '{}-Gen_f.ckpt'.format(config.resume_iter))
@@ -217,8 +219,8 @@ def train(model, device):
             logs.close()
 
         if (idx + 1) % 1000 == 0:
-            sample_path = config.sample_path
-            checkpoint_path = config.checkpoint_path
+            sample_path = os.path.join(config.sample_path, config.model_type)
+            checkpoint_path = os.path.join(config.checkpoint_path, config.model_type)
 
             utils.save_image(x, os.path.join(sample_path, '{}-x.jpg'.format(idx + 1)))
             utils.save_image(x_rec, os.path.join(sample_path, '{}-x_rec.jpg'.format(idx + 1)))
