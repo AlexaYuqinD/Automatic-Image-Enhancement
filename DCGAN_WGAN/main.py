@@ -147,13 +147,19 @@ def train(model, device):
         # gaussian blur image for discriminator_c
         fake_blur = gaussian_blur(y_fake, config.kernel_size, config.sigma, config.channels, device)
         logits_fake_blur = model.dis_c(fake_blur)
-        loss_c = model.criterion(logits_fake_blur, true_labels)
-
+        if config.model_type == 'DCGAN':
+            loss_c = model.criterion(logits_fake_blur, true_labels)
+        elif config.model_type == 'WGAN':
+            loss_c = model.criterion(logits_fake_blur)
+            
         # texture loss
         # gray-scale image for discriminator_t
         fake_gray = gray_scale(y_fake)
         logits_fake_gray = model.dis_t(fake_gray)
-        loss_t = model.criterion(logits_fake_gray, true_labels)
+        if config.model_type == 'DCGAN':
+            loss_t = model.criterion(logits_fake_gray, true_labels)
+        elif config.model_type == 'WGAN':
+            loss_t = model.criterion(logits_fake_gray)
 
         # total variation loss
         height_tv = torch.pow(y_fake[:, :, 1:, :] - y_fake[:, :, :config.height - 1, :], 2).mean()
@@ -168,6 +174,7 @@ def train(model, device):
         gen_loss.backward()
         model.g_optimizer.step()
         model.f_optimizer.step()
+ 
 
         # --------------------------------------------------------------------------------------------------------------
         #                                              Train discriminators
@@ -179,15 +186,21 @@ def train(model, device):
         real_blur = gaussian_blur(y_real, config.kernel_size, config.sigma, config.channels, device)
         logits_fake_blur = model.dis_c(fake_blur.detach())
         logits_real_blur = model.dis_c(real_blur.detach())
-        loss_dc = model.criterion(logits_real_blur, true_labels) + model.criterion(logits_fake_blur, false_labels)
-        
+        if config.model_type == 'DCGAN':
+            loss_dc = model.criterion(logits_real_blur, true_labels) + model.criterion(logits_fake_blur, false_labels)
+        elif config.model_type == 'WGAN':
+            loss_dc = model.criterion(logits_real_blur) + model.criterion(logits_fake_blur, false_labels)
+            
         # texture loss
         fake_gray = gray_scale(y_fake)
         real_gray = gray_scale(y_real)
         logits_fake_gray = model.dis_t(fake_gray.detach())
         logits_real_gray = model.dis_t(real_gray.detach())
-        loss_dt = model.criterion(logits_real_gray, true_labels) + model.criterion(logits_fake_gray, false_labels)
-        
+        if config.model_type == 'DCGAN':
+            loss_dt = model.criterion(logits_real_gray, true_labels) + model.criterion(logits_fake_gray, false_labels)
+        elif config.model_type == 'WGAN':
+            loss_dt = model.criterion(logits_real_gray) - model.criterion(logits_fake_gray)
+            
         # total discriminator loss
         dis_loss = config.lambda_c * loss_dc + config.lambda_t * loss_dt
 
@@ -196,6 +209,13 @@ def train(model, device):
         dis_loss.backward()
         model.c_optimizer.step()
         model.t_optimizer.step()
+        
+        # Add weight clamping for WGAN       
+        if config.model_type == 'WGAN':
+            for param in model.dis_c.parameter():
+                param.data.clamp_(-config.clamp, config.clamp)
+            for param in model.dis_t.parameter():
+                param.data.clamp_(-config.clamp, config.clamp)        
 
         print('Iteration : {}/{}, Gen_loss : {:.4f}, Dis_loss : {:.4f}'.format(
             idx + 1, config.train_iters, gen_loss.data, dis_loss.data))
@@ -240,7 +260,7 @@ def train(model, device):
 
 def test_patches(model, device):
     """
-    test the trained model
+    Test the trained model with patches
     
     :model: image enhancer model
     :device: cuda or cpu
@@ -281,6 +301,50 @@ def test_patches(model, device):
     score_msssim_minstar /= test_image_num
     print('PSNR : {:.4f}, SSIM_skimage : {:.4f}, SSIM_minstar : {:.4f}, SSIM_msssim: {:.4f}'.format(
         score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar))
+
+
+def test(model, device):
+    """
+    test the trained model with full images
+    
+    :model: image enhancer model
+    :device: cuda or cpu
+    """   
+    test_path = '../data/full/original/'
+    test_image_num = len([name for name in os.listdir(test_path)
+                         if os.path.isfile(os.path.join(test_path, name))]) // config.batch_size * config.batch_size
+
+    score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar = 0.0, 0.0, 0.0, 0.0
+    for ind in range(0, test_image_num):
+        test_original, test_style, image_height, image_width = load_test_dataset(ind)
+        x = torch.from_numpy(test_original).float()
+        y_real = torch.from_numpy(test_style).float()
+        x = x.view(-1, image_height, image_width, config.channels).permute(0, 3, 1, 2).to(device)
+        y_real = y_real.view(-1, image_height, image_width, config.channels).permute(0, 3, 1, 2).to(device)
+
+        y_fake = model.gen_g(x)
+
+        # Calculate PSNR & SSIM scores
+        score_psnr += psnr(y_fake, y_real)
+
+        y_fake_np = y_fake.detach().cpu().numpy().transpose(0, 2, 3, 1)
+        y_real_np = y_real.cpu().numpy().transpose(0, 2, 3, 1)
+        temp_ssim, _ = compare_ssim(y_fake_np, y_real_np, multichannel=True, gaussian_weights=True, full=True)
+        score_ssim_skimage += temp_ssim
+
+        temp_ssim, _ = ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
+        score_ssim_minstar += temp_ssim
+
+        score_msssim_minstar += multi_scale_ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
+        print('PSNR & SSIM scores of {} images are calculated.'.format(end))
+
+    score_psnr /= test_image_num
+    score_ssim_skimage /= test_image_num
+    score_ssim_minstar /= test_image_num
+    score_msssim_minstar /= test_image_num
+    print('PSNR : {:.4f}, SSIM_skimage : {:.4f}, SSIM_minstar : {:.4f}, SSIM_msssim: {:.4f}'.format(
+        score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar))
+
 
 
 def main():

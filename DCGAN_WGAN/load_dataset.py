@@ -48,6 +48,8 @@ def load_train_dataset(path, train_size, image_size):
 
 def load_test_dataset_patches(path, test_start, test_end, image_size):
     """
+    load test dataset with image patches
+    
     :path: dataset path
     :test_start: start index of the test images
     :test_end: end index of the test images
@@ -86,3 +88,23 @@ def load_test_dataset_patches(path, test_start, test_end, image_size):
             print('image / test_size : %d / %d = %.2f percent done' % (idx, test_size, idx/test_size))
 
     return test_original, test_style
+
+
+def load_test_dataset(ind):
+    """
+    load test dataset with full images
+    
+    :ind: index of the test images
+    """
+    test_path_original = '../data/full/original/'
+    test_path_style = '../data/full/style/'
+
+    img_array = np.asarray(Image.open(test_path_original + str(ind) + '.tif'))
+    image_height = img_array.shape[0]
+    image_width = img_array.shape[1]
+    test_original = np.float32(img_array.reshape(1, -1)) / 255
+
+    img_array = np.asarray(Image.open(test_path_style + str(ind) + '.tif'))
+    test_style = np.float32(img_array.reshape(1, -1)) / 255
+
+    return test_original, test_style, image_height, image_width

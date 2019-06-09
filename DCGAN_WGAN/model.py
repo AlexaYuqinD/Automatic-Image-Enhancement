@@ -63,6 +63,16 @@ class ResidualBlockInstance(nn.Module):
     def forward(self, x):
         return x + self.main(x)
 
+def weight_init(m):
+    """
+    Weight initialization for wgan
+    """
+    class_name=m.__class__.__name__
+    if class_name.find('Conv') != -1:
+        m.weight.data.normal_(0, 0.02)
+    elif class_name.find('Norm') != -1:
+        m.weight.data.normal_(1.0, 0.02)
+
 
 class Generator(nn.Module):
     """
@@ -102,7 +112,7 @@ class Discriminator(nn.Module):
     """
     Model structure for discriminator
     """
-    def __init__(self, channels=3):
+    def __init__(self, channels=3, wgan=False):
         super(Discriminator, self).__init__()
 
         layers = list()
@@ -136,25 +146,60 @@ class Discriminator(nn.Module):
         return self.main(x)
 
 
+def wgan_criterion(inp):
+    """
+    Loss function for WGAN
+    """
+    return -inp.mean()
+
 class Enhancer:
     """
     Image enhancer model
     """
     def __init__(self, config, device):
-        self.gen_g = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
-        self.gen_f = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
-        self.gen_g.to(device)
-        self.gen_f.to(device)
+        
+        if config.model_type == 'DCGAN':
+            self.gen_g = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
+            self.gen_f = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
+            self.gen_g.to(device)
+            self.gen_f.to(device)
+        
+        elif config.model_type == 'WGAN':
+            self.gen_g = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
+            self.gen_f = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
+            self.gen_g.apply(weight_init)
+            self.gen_f.apply(weight_init)
+            self.gen_g.to(device)
+            self.gen_f.to(device)            
 
         if config.train:
-            self.dis_c = Discriminator()
-            self.dis_t = Discriminator(channels=1)
-            self.dis_c.to(device)
-            self.dis_t.to(device)
-
-            self.g_optimizer = optim.Adam(self.gen_g.parameters(), lr=config.g_lr)
-            self.f_optimizer = optim.Adam(self.gen_f.parameters(), lr=config.g_lr)
-            self.c_optimizer = optim.Adam(self.dis_c.parameters(), lr=config.d_lr)
-            self.t_optimizer = optim.Adam(self.dis_t.parameters(), lr=config.d_lr)
-            self.criterion = nn.CrossEntropyLoss()
-            self.criterion.to(device)
+            if config.model_type == 'DCGAN':
+                self.dis_c = Discriminator()
+                self.dis_t = Discriminator(channels=1)
+                self.dis_c.to(device)
+                self.dis_t.to(device)
+    
+                self.g_optimizer = optim.Adam(self.gen_g.parameters(), lr=config.g_lr)
+                self.f_optimizer = optim.Adam(self.gen_f.parameters(), lr=config.g_lr)
+                self.c_optimizer = optim.Adam(self.dis_c.parameters(), lr=config.d_lr)
+                self.t_optimizer = optim.Adam(self.dis_t.parameters(), lr=config.d_lr)
+                self.criterion = nn.CrossEntropyLoss()
+                self.criterion.to(device)
+                
+            elif config.model_type == 'WGAN':
+                self.dis_c = Discriminator(wgan=True)
+                self.dis_t = Discriminator(channels=1, wgan=True)
+                self.dis_c.apply(weight_init)
+                self.dis_t.apply(weight_init)                
+                self.dis_c.to(device)
+                self.dis_t.to(device)
+                
+                # Use RMSprop for WGAN
+                self.g_optimizer = optim.RMSprop(self.gen_g.parameters(), lr=config.g_lr)
+                self.f_optimizer = optim.RMSprop(self.gen_f.parameters(), lr=config.g_lr)
+                self.c_optimizer = optim.RMSprop(self.dis_c.parameters(), lr=config.d_lr)
+                self.t_optimizer = optim.RMSprop(self.dis_t.parameters(), lr=config.d_lr)
+                
+                # change loss function for WGAN
+                self.criterion = wgan_criterion
+                self.criterion.to(device)                

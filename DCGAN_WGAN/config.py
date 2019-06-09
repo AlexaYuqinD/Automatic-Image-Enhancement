@@ -22,8 +22,9 @@ config.d_lr = 2e-4
 config.lambda_c = 5 * 1e-3
 config.lambda_t = 5 * 1e-3
 config.lambda_tv = 10
+config.clamp = 0.01  # for WGAN
 
-config.resume_iter = 0
+config.resume_iter = 0 # NOTE: if test, must set resume_iter to load checkpoints!
 config.train_iters = 20000
 config.train = True
 config.test = True
