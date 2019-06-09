@@ -3,30 +3,31 @@ Link to our dataset: [MIT-Adobe FiveK Dataset](https://data.csail.mit.edu/graphi
 
 ## 1. Run Baseline Model
 
-### Train
+Train
 
 '''
 
 '''
 
-### Test
+Test
 
 
 
 ## 2. Run DCGAN
 
-### Train
+Train
 
-'''
+'''bash
 python main.py --train --model_type DCGAN
 '''
 
-### Test image patches
-'''
+Test image patches
+
+'''bash
 python main.py --test --model_type DCGAN
 '''
 
-### Test full images
+Test full images
 
 
 ## 3. Run WGAN
