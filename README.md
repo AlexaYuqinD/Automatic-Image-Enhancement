@@ -1,6 +1,8 @@
 # Automatic-Image-Enhancement
 Link to our dataset: [MIT-Adobe FiveK Dataset](https://data.csail.mit.edu/graphics/fivek/)
 
+Download the data and preprocess it to run the code.
+
 ## 1. Run Baseline Model
 
 ```bash
