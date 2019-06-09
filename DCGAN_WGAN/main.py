@@ -311,6 +311,7 @@ def test(model, device):
     :device: cuda or cpu
     """   
     test_path = '../data/full/original/'
+    generate_path = '../data/full/generate/'
     test_image_num = len([name for name in os.listdir(test_path)
                          if os.path.isfile(os.path.join(test_path, name))]) // config.batch_size * config.batch_size
 
@@ -337,6 +338,8 @@ def test(model, device):
 
         score_msssim_minstar += multi_scale_ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
         print('PSNR & SSIM scores of {} images are calculated.'.format(end))
+        
+        utils.save_image(y_fake, os.path.join(generate_path, '{}-x.jpg'.format(ind)))
 
     score_psnr /= test_image_num
     score_ssim_skimage /= test_image_num
