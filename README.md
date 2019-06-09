@@ -34,7 +34,7 @@ python main.py --test --resume_iter <resume_iter> --model_type DCGAN
 #### Train
 
 ```bash
-python main.py --train --resume_iter <resume_iter> --model_type WGAN
+python main.py --train --model_type WGAN
 ```
 
 #### Test image patches
