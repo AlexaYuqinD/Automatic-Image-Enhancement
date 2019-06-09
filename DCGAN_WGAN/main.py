@@ -190,7 +190,7 @@ def train(args, model, device):
         if args.model_type == 'DCGAN':
             loss_dc = model.criterion(logits_real_blur, true_labels) + model.criterion(logits_fake_blur, false_labels)
         elif args.model_type == 'WGAN':
-            loss_dc = model.criterion(logits_real_blur) + model.criterion(logits_fake_blur, false_labels)
+            loss_dc = model.criterion(logits_real_blur) - model.criterion(logits_fake_blur)
             
         # texture loss
         fake_gray = gray_scale(y_fake)
@@ -213,9 +213,9 @@ def train(args, model, device):
         
         # Add weight clamping for WGAN       
         if args.model_type == 'WGAN':
-            for param in model.dis_c.parameter():
+            for param in model.dis_c.parameters():
                 param.data.clamp_(-config.clamp, config.clamp)
-            for param in model.dis_t.parameter():
+            for param in model.dis_t.parameters():
                 param.data.clamp_(-config.clamp, config.clamp)        
 
         print('Iteration : {}/{}, Gen_loss : {:.4f}, Dis_loss : {:.4f}'.format(
@@ -311,7 +311,7 @@ def test_patches(args, model, device):
         score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar))
 
 
-def test_full(model, device):
+def test_full(args, model, device):
     """
     test the trained model with full images
     
@@ -351,7 +351,7 @@ def test_full(model, device):
             score_msssim_minstar += multi_scale_ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
             print('PSNR & SSIM scores of {} images are calculated.'.format(ind))
             
-            utils.save_image(y_fake, os.path.join(generate_path, '{}-x.jpg'.format(name)))
+            utils.save_image(y_fake, os.path.join(generate_path, '{}-x.jpg'.format(name[:5] + args.model_type)))
 
     score_psnr /= test_image_num
     score_ssim_skimage /= test_image_num
@@ -384,7 +384,7 @@ def main():
     if args.train:
         train(args, model, device)
     elif args.test_full:
-        test_full(model, device)
+        test_full(args, model, device)
     elif args.val_patches or args.test_patches:
         test_patches(args, model, device)
 

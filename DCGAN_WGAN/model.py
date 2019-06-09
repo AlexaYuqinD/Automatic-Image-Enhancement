@@ -201,5 +201,4 @@ class Enhancer:
                 self.t_optimizer = optim.RMSprop(self.dis_t.parameters(), lr=config.d_lr)
                 
                 # change loss function for WGAN
-                self.criterion = wgan_criterion
-                self.criterion.to(device)                
+                self.criterion = wgan_criterion               
