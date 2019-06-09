@@ -2,6 +2,7 @@ from __future__ import division
 from PIL import Image
 import numpy as np
 import os
+from config import config
 
 
 
@@ -55,8 +56,12 @@ def load_test_dataset_patches(path, test_start, test_end, image_size):
     :test_end: end index of the test images
     :image_size: size of each image
     """
-    test_path_original = path + '/test/original/'
-    test_path_style = path + '/test/style/'
+    if config.val_patches:
+        test_path_original = path + '/val/original/'
+        test_path_style = path + '/val/style/'    
+    elif config.test_patches:
+        test_path_original = path + '/test/original/'
+        test_path_style = path + '/test/style/'
 
     test_image_num = len([name for name in os.listdir(test_path_original)
                          if os.path.isfile(os.path.join(test_path_original, name))])

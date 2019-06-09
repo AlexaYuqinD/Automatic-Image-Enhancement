@@ -265,7 +265,10 @@ def test_patches(model, device):
     :model: image enhancer model
     :device: cuda or cpu
     """   
-    test_path = config.data_path + '/test/original/'
+    if config.val_patches:
+        test_path = config.data_path + '/val/original/'
+    elif config.test_patches:
+        test_path = config.data_path + '/test/original/'
     test_image_num = len([name for name in os.listdir(test_path)
                          if os.path.isfile(os.path.join(test_path, name))]) // config.batch_size * config.batch_size
 
@@ -303,7 +306,7 @@ def test_patches(model, device):
         score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar))
 
 
-def test(model, device):
+def test_full(model, device):
     """
     test the trained model with full images
     
@@ -360,9 +363,9 @@ def main():
 
     if config.train:
         train(model, device)
-    elif config.test:
-        test(model, device)
-    else:
+    elif config.test_full:
+        test_full(model, device)
+    elif config.val_patches or config.test_patches:
         test_patches(model, device)
 
 

@@ -19,16 +19,22 @@ python style_transfer.py
 python main.py --train --model_type DCGAN
 ```
 
+#### Run on validation set
+
+```bash
+python main.py --val_patches --resume_iter <resume_iter> --model_type DCGAN 
+```
+
 #### Test image patches
 
 ```bash
-python main.py --test_batches --resume_iter <resume_iter> --model_type DCGAN 
+python main.py --test_patches --resume_iter <resume_iter> --model_type DCGAN 
 ```
 
 #### Test full images
 
 ```bash
-python main.py --test --resume_iter <resume_iter> --model_type DCGAN 
+python main.py --test_full --resume_iter <resume_iter> --model_type DCGAN 
 ```
 
 ## 3. Run WGAN
@@ -39,14 +45,19 @@ python main.py --test --resume_iter <resume_iter> --model_type DCGAN
 python main.py --train --model_type WGAN
 ```
 
+#### Run on validation set
+```bash
+python main.py --val_patches --resume_iter <resume_iter> --model_type WGAN 
+```
+
 #### Test image patches
 
 ```bash
-python main.py --test_batches --resume_iter <resume_iter> --model_type WGAN 
+python main.py --test_patches --resume_iter <resume_iter> --model_type WGAN 
 ```
 
 #### Test full images
 
 ```bash
-python main.py --test --resume_iter <resume_iter> --model_type WGAN 
+python main.py --test_full --resume_iter <resume_iter> --model_type WGAN 
 ```
