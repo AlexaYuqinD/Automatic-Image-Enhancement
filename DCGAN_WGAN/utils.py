@@ -95,6 +95,22 @@ def psnr(image1, image2):
     psnr_score = 20 * math.log10(1) - 10 * math.log10(MSE)
     return psnr_score
 
+def psnr_full(image1, image2):
+    """
+    :psnr: approximate estimate of absolute error
+    :image1: (channels, height, width) style image
+    :image2: (channels, height, width) enhanced image
+    :return: psnr_score of image1 and image2
+    """
+    image_size = image1.shape[0] * image1.shape[1] * image1.shape[2]
+    image1 = image1.view(-1, image_size)
+    image2 = image2.view(-1, image_size)
+    # compute MSE with image1 and image2
+    MSE = torch.sum(torch.pow((image1 - image2), 2)) / image_size
+    # compute psnr score
+    psnr_score = 20 * math.log10(1) - 10 * math.log10(MSE)
+    return psnr_score
+
 
 def fspecial_gauss(window_size, window_sigma):
     """
@@ -137,12 +153,15 @@ def ssim(image1, image2, kernel_size=11, kernel_sigma=1.5):
         filter_sigma = 0
 
     if kernel_size:
-        window = np.reshape(fspecial_gauss(filter_size, filter_sigma), newshape=(1, 1, filter_size, filter_size))
+        if len(image1.shape) == 4:
+            window = np.reshape(fspecial_gauss(filter_size, filter_sigma), newshape=(1, 1, filter_size, filter_size))
+        elif len(image1.shape) == 3:
+            window = np.reshape(fspecial_gauss(filter_size, filter_sigma), newshape=(1, filter_size, filter_size))
         mu1 = signal.fftconvolve(image1, window, mode='same')
         mu2 = signal.fftconvolve(image2, window, mode='same')
         sigma11 = signal.fftconvolve(image1*image1, window, mode='same')
         sigma22 = signal.fftconvolve(image2*image2, window, mode='same')
-        sigma12 = signal.fftconvolve(image1*image2, window, mode='same')
+        sigma12 = signal.fftconvolve(image1*image2, window, mode='same')         
     else:  
         # empty gaussian blur kernel, no need to convolve
         mu1 = image1
@@ -195,14 +214,21 @@ def multi_scale_ssim(image1, image2, kernel_size=11, kernel_sigma=1.5, weights=N
     else:
         weights = np.array([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
 
-    levels = len(weights)
-    downsample = np.ones((1, 1, 2, 2)) / 4.0
 
+    levels = len(weights)
+    if len(image1.shape) == 4:
+        downsample = np.ones((1, 1, 2, 2)) / 4.0
+    elif len(image1.shape) == 3:
+        downsample = np.ones((1, 2, 2)) / 3.0
+        
     for i in range(levels):
         ssim_score, cs = ssim(image1, image2, kernel_size, kernel_sigma)
         ms_ssim = np.append(ms_ssim, ssim_score)
         cs_map = np.append(cs_map, cs)
         downsample_filtered = [convolve(image, downsample, mode='reflect') for image in [image1, image2]]
-        image1, image2 = [image[:, :, ::2, ::2] for image in downsample_filtered]
+        if len(image1.shape) == 4:
+            image1, image2 = [image[:, :, ::2, ::2] for image in downsample_filtered]
+        elif len(image1.shape) == 3:
+            image1, image2 = [image[:, ::2, ::2] for image in downsample_filtered]
 
     return np.prod(cs_map[0:levels-1] ** weights[0:levels-1]) * (ms_ssim[levels-1] ** weights[levels-1])

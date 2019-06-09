@@ -2,8 +2,6 @@ from __future__ import division
 from PIL import Image
 import numpy as np
 import os
-from config import config
-
 
 
 def load_train_dataset(path, train_size, image_size):
@@ -47,7 +45,7 @@ def load_train_dataset(path, train_size, image_size):
     return train_original, train_style
 
 
-def load_test_dataset_patches(path, test_start, test_end, image_size):
+def load_test_dataset_patches(valTest, path, test_start, test_end, image_size):
     """
     load test dataset with image patches
     
@@ -56,10 +54,10 @@ def load_test_dataset_patches(path, test_start, test_end, image_size):
     :test_end: end index of the test images
     :image_size: size of each image
     """
-    if config.val_patches:
+    if valTest == 'val':
         test_path_original = path + '/val/original/'
         test_path_style = path + '/val/style/'    
-    elif config.test_patches:
+    elif valTest == 'test':
         test_path_original = path + '/test/original/'
         test_path_style = path + '/test/style/'
 
@@ -95,7 +93,7 @@ def load_test_dataset_patches(path, test_start, test_end, image_size):
     return test_original, test_style
 
 
-def load_test_dataset(ind):
+def load_test_dataset(name):
     """
     load test dataset with full images
     
@@ -104,12 +102,14 @@ def load_test_dataset(ind):
     test_path_original = '../data/full/original/'
     test_path_style = '../data/full/style/'
 
-    img_array = np.asarray(Image.open(test_path_original + str(ind) + '.tif'))
+    img_array = np.asarray(Image.open(test_path_original + name))
     image_height = img_array.shape[0]
     image_width = img_array.shape[1]
-    test_original = np.float32(img_array.reshape(1, -1)) / 255
+#    test_original = np.float32(img_array.reshape(1, -1)) / 255
+    test_original = np.float32(img_array) / 255
 
-    img_array = np.asarray(Image.open(test_path_style + str(ind) + '.tif'))
-    test_style = np.float32(img_array.reshape(1, -1)) / 255
+    img_array = np.asarray(Image.open(test_path_style + name[:5] + 'a' + '.tif'))
+#    test_style = np.float32(img_array.reshape(1, -1)) / 255
+    test_style = np.float32(img_array) / 255
 
     return test_original, test_style, image_height, image_width

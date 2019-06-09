@@ -5,7 +5,7 @@ config = easydict.EasyDict()
 config.data_path = '../data/patches/'
 config.sample_path = './samples/'
 config.checkpoint_path = './checkpoints/'
-config.model_type = 'DCGAN'  # ['DCGAN', 'WGAN']
+#config.model_type = 'DCGAN'  # ['DCGAN', 'WGAN']
 
 
 config.batch_size = 35
@@ -24,12 +24,12 @@ config.lambda_t = 5 * 1e-3
 config.lambda_tv = 10
 config.clamp = 0.01  # for WGAN
 
-config.resume_iter = 0 # NOTE: if test, must set resume_iter to load checkpoints!
+#config.resume_iter = 0 # NOTE: if test, must set resume_iter to load checkpoints!
 config.train_iters = 20000
-config.train = False
-config.test_full = False
-config.val_patches = False
-config.test_patches = False
+#config.train = False
+#config.test_full = False
+#config.val_patches = False
+#config.test_patches = False
 config.use_cuda = True
 
 config.batch_norm = True

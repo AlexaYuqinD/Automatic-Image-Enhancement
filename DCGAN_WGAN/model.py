@@ -156,15 +156,15 @@ class Enhancer:
     """
     Image enhancer model
     """
-    def __init__(self, config, device):
+    def __init__(self, config, args, device):
         
-        if config.model_type == 'DCGAN':
+        if args.model_type == 'DCGAN':
             self.gen_g = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
             self.gen_f = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
             self.gen_g.to(device)
             self.gen_f.to(device)
         
-        elif config.model_type == 'WGAN':
+        elif args.model_type == 'WGAN':
             self.gen_g = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
             self.gen_f = Generator(useBatch = config.batch_norm, useInstance = config.instance_norm)
             self.gen_g.apply(weight_init)
@@ -172,8 +172,8 @@ class Enhancer:
             self.gen_g.to(device)
             self.gen_f.to(device)            
 
-        if config.train:
-            if config.model_type == 'DCGAN':
+        if args.train:
+            if args.model_type == 'DCGAN':
                 self.dis_c = Discriminator()
                 self.dis_t = Discriminator(channels=1)
                 self.dis_c.to(device)
@@ -186,7 +186,7 @@ class Enhancer:
                 self.criterion = nn.CrossEntropyLoss()
                 self.criterion.to(device)
                 
-            elif config.model_type == 'WGAN':
+            elif args.model_type == 'WGAN':
                 self.dis_c = Discriminator(wgan=True)
                 self.dis_t = Discriminator(channels=1, wgan=True)
                 self.dis_c.apply(weight_init)

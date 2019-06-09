@@ -10,6 +10,7 @@ import torchvision.models as models
 import torchvision.utils as utils
 from skimage.measure import compare_ssim
 import time
+import argparse
 
 
 class FeatureExtractor(nn.Sequential):
@@ -26,16 +27,16 @@ class FeatureExtractor(nn.Sequential):
                 return x
 
 
-def setup(checkpoint_path, sample_path):
+def setup(args, checkpoint_path, sample_path):
     """
     :checkpoint_path: path of model checkpoints 
     :sample_path: path of sample outputs
     """
-    if not os.path.exists(os.path.join(config.checkpoint_path, config.model_type)):
-        os.makedirs(os.path.join(config.checkpoint_path, config.model_type))
+    if not os.path.exists(os.path.join(config.checkpoint_path, args.model_type)):
+        os.makedirs(os.path.join(config.checkpoint_path, args.model_type))
     
-    if not os.path.exists(os.path.join(config.sample_path, config.model_type)):    
-        os.makedirs(os.path.join(config.sample_path, config.model_type))
+    if not os.path.exists(os.path.join(config.sample_path, args.model_type)):    
+        os.makedirs(os.path.join(config.sample_path, args.model_type))
 
     if not os.path.exists('./logs/'):
         os.makedirs('./logs/')
@@ -89,28 +90,28 @@ def get_feature(model, img_tensor, feature_id, device):
     return feature
 
 
-def load_checkpoints(model):
+def load_checkpoints(args, model):
     """
     Load model checkpoints to either test or continue training
     
     :model: image enhancer model
     """    
-    print('Loading the model checkpoints from iter {}...'.format(config.resume_iter))
-    checkpoint_path = os.path.join(config.checkpoint_path, config.model_type)
+    print('Loading the model checkpoints from iter {}...'.format(args.resume_iter))
+    checkpoint_path = os.path.join(config.checkpoint_path, args.model_type)
 
-    gen_g_path = os.path.join(checkpoint_path, '{}-Gen_g.ckpt'.format(config.resume_iter))
-    gen_f_path = os.path.join(checkpoint_path, '{}-Gen_f.ckpt'.format(config.resume_iter))
+    gen_g_path = os.path.join(checkpoint_path, '{}-Gen_g.ckpt'.format(args.resume_iter))
+    gen_f_path = os.path.join(checkpoint_path, '{}-Gen_f.ckpt'.format(args.resume_iter))
     model.gen_g.load_state_dict(torch.load(gen_g_path, map_location=lambda storage, loc: storage))
     model.gen_f.load_state_dict(torch.load(gen_f_path, map_location=lambda storage, loc: storage))
 
-    if config.train:
-        dis_c_path = os.path.join(checkpoint_path, '{}-Dis_c.ckpt'.format(config.resume_iter))
-        dis_t_path = os.path.join(checkpoint_path, '{}-Dis_t.ckpt'.format(config.resume_iter))
+    if args.train:
+        dis_c_path = os.path.join(checkpoint_path, '{}-Dis_c.ckpt'.format(args.resume_iter))
+        dis_t_path = os.path.join(checkpoint_path, '{}-Dis_t.ckpt'.format(args.resume_iter))
         model.dis_c.load_state_dict(torch.load(dis_c_path, map_location=lambda storage, loc: storage))
         model.dis_t.load_state_dict(torch.load(dis_t_path, map_location=lambda storage, loc: storage))
 
 
-def train(model, device):
+def train(args, model, device):
     """
     train the model
     
@@ -124,7 +125,7 @@ def train(model, device):
     logs = open('logs/' + settime + '.txt', "w+")
     logs.close()
     
-    for idx in range(config.resume_iter, config.train_iters):
+    for idx in range(args.resume_iter, config.train_iters):
         train_original, train_style = load_train_dataset(config.data_path, config.batch_size,
                                                      config.height * config.width * config.channels)
         x = torch.from_numpy(train_original).float()
@@ -147,18 +148,18 @@ def train(model, device):
         # gaussian blur image for discriminator_c
         fake_blur = gaussian_blur(y_fake, config.kernel_size, config.sigma, config.channels, device)
         logits_fake_blur = model.dis_c(fake_blur)
-        if config.model_type == 'DCGAN':
+        if args.model_type == 'DCGAN':
             loss_c = model.criterion(logits_fake_blur, true_labels)
-        elif config.model_type == 'WGAN':
+        elif args.model_type == 'WGAN':
             loss_c = model.criterion(logits_fake_blur)
             
         # texture loss
         # gray-scale image for discriminator_t
         fake_gray = gray_scale(y_fake)
         logits_fake_gray = model.dis_t(fake_gray)
-        if config.model_type == 'DCGAN':
+        if args.model_type == 'DCGAN':
             loss_t = model.criterion(logits_fake_gray, true_labels)
-        elif config.model_type == 'WGAN':
+        elif args.model_type == 'WGAN':
             loss_t = model.criterion(logits_fake_gray)
 
         # total variation loss
@@ -186,9 +187,9 @@ def train(model, device):
         real_blur = gaussian_blur(y_real, config.kernel_size, config.sigma, config.channels, device)
         logits_fake_blur = model.dis_c(fake_blur.detach())
         logits_real_blur = model.dis_c(real_blur.detach())
-        if config.model_type == 'DCGAN':
+        if args.model_type == 'DCGAN':
             loss_dc = model.criterion(logits_real_blur, true_labels) + model.criterion(logits_fake_blur, false_labels)
-        elif config.model_type == 'WGAN':
+        elif args.model_type == 'WGAN':
             loss_dc = model.criterion(logits_real_blur) + model.criterion(logits_fake_blur, false_labels)
             
         # texture loss
@@ -196,9 +197,9 @@ def train(model, device):
         real_gray = gray_scale(y_real)
         logits_fake_gray = model.dis_t(fake_gray.detach())
         logits_real_gray = model.dis_t(real_gray.detach())
-        if config.model_type == 'DCGAN':
+        if args.model_type == 'DCGAN':
             loss_dt = model.criterion(logits_real_gray, true_labels) + model.criterion(logits_fake_gray, false_labels)
-        elif config.model_type == 'WGAN':
+        elif args.model_type == 'WGAN':
             loss_dt = model.criterion(logits_real_gray) - model.criterion(logits_fake_gray)
             
         # total discriminator loss
@@ -211,7 +212,7 @@ def train(model, device):
         model.t_optimizer.step()
         
         # Add weight clamping for WGAN       
-        if config.model_type == 'WGAN':
+        if args.model_type == 'WGAN':
             for param in model.dis_c.parameter():
                 param.data.clamp_(-config.clamp, config.clamp)
             for param in model.dis_t.parameter():
@@ -239,8 +240,8 @@ def train(model, device):
             logs.close()
 
         if (idx + 1) % 1000 == 0:
-            sample_path = os.path.join(config.sample_path, config.model_type)
-            checkpoint_path = os.path.join(config.checkpoint_path, config.model_type)
+            sample_path = os.path.join(config.sample_path, args.model_type)
+            checkpoint_path = os.path.join(config.checkpoint_path, args.model_type)
 
             utils.save_image(x, os.path.join(sample_path, '{}-x.jpg'.format(idx + 1)))
             utils.save_image(x_rec, os.path.join(sample_path, '{}-x_rec.jpg'.format(idx + 1)))
@@ -258,16 +259,16 @@ def train(model, device):
             print('Saved intermediate images and model checkpoints.')
 
 
-def test_patches(model, device):
+def test_patches(args, model, device):
     """
     Test the trained model with patches
     
     :model: image enhancer model
     :device: cuda or cpu
     """   
-    if config.val_patches:
+    if args.val_patches:
         test_path = config.data_path + '/val/original/'
-    elif config.test_patches:
+    elif args.test_patches:
         test_path = config.data_path + '/test/original/'
     test_image_num = len([name for name in os.listdir(test_path)
                          if os.path.isfile(os.path.join(test_path, name))]) // config.batch_size * config.batch_size
@@ -275,7 +276,11 @@ def test_patches(model, device):
     score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar = 0.0, 0.0, 0.0, 0.0
     for start in range(0, test_image_num, config.batch_size):
         end = min(start + config.batch_size, test_image_num)
-        test_original, test_style = load_test_dataset_patches(config.data_path, start, end,
+        if args.val_patches:
+            test_original, test_style = load_test_dataset_patches('val', config.data_path, start, end,
+                                                  config.height * config.width * config.channels)        
+        elif args.test_patches:
+            test_original, test_style = load_test_dataset_patches('test', config.data_path, start, end,
                                                   config.height * config.width * config.channels)
         x = torch.from_numpy(test_original).float()
         y_real = torch.from_numpy(test_style).float()
@@ -316,33 +321,37 @@ def test_full(model, device):
     test_path = '../data/full/original/'
     generate_path = '../data/full/generate/'
     test_image_num = len([name for name in os.listdir(test_path)
-                         if os.path.isfile(os.path.join(test_path, name))]) // config.batch_size * config.batch_size
+                         if os.path.isfile(os.path.join(test_path, name))])
 
     score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar = 0.0, 0.0, 0.0, 0.0
-    for ind in range(0, test_image_num):
-        test_original, test_style, image_height, image_width = load_test_dataset(ind)
-        x = torch.from_numpy(test_original).float()
-        y_real = torch.from_numpy(test_style).float()
-        x = x.view(-1, image_height, image_width, config.channels).permute(0, 3, 1, 2).to(device)
-        y_real = y_real.view(-1, image_height, image_width, config.channels).permute(0, 3, 1, 2).to(device)
-
-        y_fake = model.gen_g(x)
-
-        # Calculate PSNR & SSIM scores
-        score_psnr += psnr(y_fake, y_real)
-
-        y_fake_np = y_fake.detach().cpu().numpy().transpose(0, 2, 3, 1)
-        y_real_np = y_real.cpu().numpy().transpose(0, 2, 3, 1)
-        temp_ssim, _ = compare_ssim(y_fake_np, y_real_np, multichannel=True, gaussian_weights=True, full=True)
-        score_ssim_skimage += temp_ssim
-
-        temp_ssim, _ = ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
-        score_ssim_minstar += temp_ssim
-
-        score_msssim_minstar += multi_scale_ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
-        print('PSNR & SSIM scores of {} images are calculated.'.format(end))
-        
-        utils.save_image(y_fake, os.path.join(generate_path, '{}-x.jpg'.format(ind)))
+    ind = 0
+    for name in os.listdir(test_path):
+        if os.path.isfile(os.path.join(test_path, name)):
+            ind += 1
+            test_original, test_style, image_height, image_width = load_test_dataset(name)
+            x = torch.from_numpy(test_original).float()
+            y_real = torch.from_numpy(test_style).float()
+            x = x.view(image_height, image_width, config.channels).permute(2, 0, 1).to(device)
+            y_real = y_real.view(image_height, image_width, config.channels).permute(2, 0, 1).to(device)
+    
+            y_fake = model.gen_g(x.view(-1, config.channels, image_height, image_width))
+            y_fake = y_fake.view(config.channels, image_height, image_width)
+    
+            # Calculate PSNR & SSIM scores
+            score_psnr += psnr_full(y_fake, y_real)
+    
+            y_fake_np = y_fake.detach().cpu().numpy().transpose(1, 2, 0)
+            y_real_np = y_real.cpu().numpy().transpose(1, 2, 0)
+            temp_ssim, _ = compare_ssim(y_fake_np, y_real_np, multichannel=True, gaussian_weights=True, full=True)
+            score_ssim_skimage += temp_ssim
+    
+            temp_ssim, _ = ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
+            score_ssim_minstar += temp_ssim
+    
+            score_msssim_minstar += multi_scale_ssim(y_fake, y_real, kernel_size=11, kernel_sigma=1.5)
+            print('PSNR & SSIM scores of {} images are calculated.'.format(ind))
+            
+            utils.save_image(y_fake, os.path.join(generate_path, '{}-x.jpg'.format(name)))
 
     score_psnr /= test_image_num
     score_ssim_skimage /= test_image_num
@@ -352,21 +361,32 @@ def test_full(model, device):
         score_psnr, score_ssim_skimage, score_ssim_minstar, score_msssim_minstar))
 
 
-
 def main():
-    setup(config.checkpoint_path, config.sample_path)
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--train', dest='train', action='store_true', help="whether to train the model")
+    parser.add_argument('--val_patches', dest='val_patches', action='store_true', help="whether to validate the model on image patches")
+    parser.add_argument('--test_patches', dest='test_patches', action='store_true', help="whether to test the model on image patches")
+    parser.add_argument('--test_full', dest='test_full', action='store_true', help="whether to test the model on full images")
+    parser.set_defaults(train=False, val_patches=False, test_patches=False, test_full=False)
+    parser.add_argument('--model_type', default='DCGAN', help="type of model, choose from DCGAN/WGAN")    
+    parser.add_argument('--resume_iter', default=0, type=int, help="load trained model of <resume_iter> iterations")    
+
+    args = parser.parse_args()
+    
+    setup(args, config.checkpoint_path, config.sample_path)
     
     device = torch.device('cuda:0' if config.use_cuda else 'cpu')
-    model = Enhancer(config, device)
-    if config.resume_iter != 0:
-        load_checkpoints(model)
+    model = Enhancer(config, args, device)
+    if args.resume_iter != 0:
+        load_checkpoints(args, model)
 
-    if config.train:
-        train(model, device)
-    elif config.test_full:
+    if args.train:
+        train(args, model, device)
+    elif args.test_full:
         test_full(model, device)
-    elif config.val_patches or config.test_patches:
-        test_patches(model, device)
+    elif args.val_patches or args.test_patches:
+        test_patches(args, model, device)
 
 
 if __name__ == '__main__':

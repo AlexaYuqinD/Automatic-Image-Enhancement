@@ -46,6 +46,7 @@ python main.py --train --model_type WGAN
 ```
 
 #### Run on validation set
+
 ```bash
 python main.py --val_patches --resume_iter <resume_iter> --model_type WGAN 
 ```
