@@ -26,9 +26,9 @@ config.clamp = 0.01  # for WGAN
 
 config.resume_iter = 0 # NOTE: if test, must set resume_iter to load checkpoints!
 config.train_iters = 20000
-config.train = True
-config.test = True
-config.test_patches = True
+config.train = False
+config.test = False
+config.test_patches = False
 config.use_cuda = True
 
 config.batch_norm = True
