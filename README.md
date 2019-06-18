@@ -62,3 +62,10 @@ python main.py --test_patches --resume_iter <resume_iter> --model_type WGAN
 ```bash
 python main.py --test_full --resume_iter <resume_iter> --model_type WGAN 
 ```
+
+## Reference
+[JuheonYi/DPED-TensorFlow](https://github.com/JuheonYi/DPED-TensorFlow)
+
+[aiff22/DPED](https://github.com/aiff22/DPED)
+
+[NELSONZHAO/zhihu/image_style_transfer](https://github.com/NELSONZHAO/zhihu/tree/master/image_style_transfer)
