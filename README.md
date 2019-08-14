@@ -9,7 +9,7 @@ Download the data and preprocess it into patches before running the code.
 python style_transfer.py
 ```
 
-(Default photo: a0001.tif, can change manually)
+(Default photo: a0001.tif, can be changed manually)
 
 ## 2. Run DCGAN
 
